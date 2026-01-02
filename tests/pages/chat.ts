@@ -41,11 +41,8 @@ export class ChatPage {
   }
 
   async isGenerationComplete() {
-    const response = await this.page.waitForResponse((response) =>
-      response.url().includes('/api/chat'),
-    );
-
-    await response.finished();
+    // Wait for the send button to reappear, which indicates generation is complete
+    await expect(this.sendButton).toBeVisible({ timeout: 60000 });
   }
 
   async isVoteComplete() {
@@ -191,8 +188,12 @@ export class ChatPage {
       .isVisible()
       .catch(() => false);
 
+    // Get individual attachment previews inside the message-attachments container
     const attachments = hasAttachments
-      ? await lastMessageElement.getByTestId('message-attachments').all()
+      ? await lastMessageElement
+          .getByTestId('message-attachments')
+          .getByTestId('input-attachment-preview')
+          .all()
       : [];
 
     const page = this.page;

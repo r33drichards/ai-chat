@@ -265,11 +265,11 @@ interface ExecShellProps {
 export const execShell = ({ session, dataStream, chatId }: ExecShellProps) =>
   tool({
     description: `Execute a shell command in a secure Modal sandbox with real-time streaming output.
-The sandbox has a persistent home directory per session, so files and changes persist across tool calls.
+The sandbox has a persistent home directory for this conversation, so files and changes persist across tool calls.
 Use this for tasks like: running tests, building code, executing scripts, installing packages, etc.
 
 Available tools: Node.js 20, Python 3, Go, npm, pnpm, yarn, pip, ripgrep, gh (GitHub CLI), and common shell utilities.
-The home directory is ${SANDBOX_HOME} and persists across calls with the same sessionId.
+The home directory is ${SANDBOX_HOME} and persists across calls in this conversation.
 Network access is restricted to GitHub only.
 
 IMPORTANT: This tool returns immediately with a streamId. The command runs asynchronously.
@@ -279,12 +279,6 @@ The UI will show real-time streaming output.`,
       command: z
         .string()
         .describe('The shell command to execute (will be run with bash -c)'),
-      sessionId: z
-        .string()
-        .uuid('Session ID must be a valid UUID')
-        .describe(
-          'A unique session ID (UUID format) for persistence. Use the same ID across related tool calls to maintain state.',
-        ),
       timeoutMs: z
         .number()
         .min(1000)
@@ -296,15 +290,16 @@ The UI will show real-time streaming output.`,
     }),
     execute: async ({
       command,
-      sessionId,
       timeoutMs,
     }: {
       command: string;
-      sessionId: string;
       timeoutMs?: number;
     }) => {
       // Generate a unique stream ID
       const streamId = generateStreamId();
+
+      // Use chatId as the sessionId to ensure each conversation gets its own sandbox
+      const sessionId = chatId;
 
       // Create the shell stream in the database
       await createShellStream({
@@ -351,7 +346,6 @@ The UI will show real-time streaming output.`,
       return {
         status: 'streaming',
         streamId,
-        sessionId,
         command,
         message:
           'Command started. Use getShellResult to wait for completion, or the UI will show real-time output.',
@@ -427,41 +421,41 @@ The streamId is returned by execShell when you start a command.`,
     },
   });
 
-export const clearSandboxState = tool({
-  description:
-    'Clear the persistent state (volumes) for a sandbox session. Use this to start fresh with a clean state.',
-  inputSchema: z.object({
-    sessionId: z
-      .string()
-      .uuid('Session ID must be a valid UUID')
-      .describe('The session ID (UUID format) whose state should be cleared'),
-  }),
-  execute: async ({ sessionId }: { sessionId: string }) => {
-    try {
-      const modal = getModalClient();
-      const homeVolumeName = sanitizeVolumeName(`home-${sessionId}`);
+interface ClearSandboxStateProps {
+  chatId: string;
+}
 
+export const clearSandboxState = ({ chatId }: ClearSandboxStateProps) =>
+  tool({
+    description:
+      'Clear the persistent state (volumes) for this conversation\'s sandbox. Use this to start fresh with a clean state.',
+    inputSchema: z.object({}),
+    execute: async () => {
       try {
-        await modal.volumes.delete(homeVolumeName, { allowMissing: true });
+        const modal = getModalClient();
+        const homeVolumeName = sanitizeVolumeName(`home-${chatId}`);
+
+        try {
+          await modal.volumes.delete(homeVolumeName, { allowMissing: true });
+          return {
+            success: true,
+            clearedVolume: homeVolumeName,
+            message: `Cleared volume: ${homeVolumeName}`,
+          };
+        } catch {
+          return {
+            success: true,
+            message: 'No volume found to clear',
+          };
+        }
+      } catch (error) {
         return {
-          success: true,
-          clearedVolume: homeVolumeName,
-          message: `Cleared volume: ${homeVolumeName}`,
-        };
-      } catch {
-        return {
-          success: true,
-          message: 'No volume found to clear',
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error clearing sandbox state',
         };
       }
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error clearing sandbox state',
-      };
-    }
-  },
-});
+    },
+  });

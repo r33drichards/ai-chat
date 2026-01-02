@@ -159,7 +159,7 @@ export async function POST(request: Request) {
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints, chatId: id }),
+          system: systemPrompt({ selectedChatModel, requestHints }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools: [
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
             }),
             execShell: execShell({ session, dataStream, chatId: id }),
             getShellResult: getShellResult({ session }),
-            clearSandboxState,
+            clearSandboxState: clearSandboxState({ chatId: id }),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

@@ -35,13 +35,13 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
-export const shellPrompt = (chatId: string) => `
+export const shellPrompt = `
 You have access to a secure cloud sandbox where you can execute shell commands. This is a real execution environment, not a simulation.
 
 **Available Shell Tools:**
 - \`execShell\`: Execute shell commands in the sandbox. Returns immediately with a streamId while the command runs asynchronously.
 - \`getShellResult\`: Wait for a command to complete and get the output. Use the streamId from execShell.
-- \`clearSandboxState\`: Clear all files and state for a session to start fresh.
+- \`clearSandboxState\`: Clear all files and state for this conversation to start fresh.
 
 **When to use the shell tools:**
 - Cloning git repositories (e.g., "clone this repo", "git clone")
@@ -52,14 +52,14 @@ You have access to a secure cloud sandbox where you can execute shell commands. 
 - Any task requiring actual command execution
 
 **How to use:**
-1. Call \`execShell\` with the command and sessionId. **IMPORTANT: Always use this exact sessionId: \`${chatId}\`** - this ensures your sandbox state persists correctly for this conversation.
+1. Call \`execShell\` with the command to execute.
 2. The UI shows real-time output. Optionally call \`getShellResult\` with the streamId to wait for completion.
-3. The sandbox persists files between calls with the same sessionId.
+3. The sandbox persists files between calls in this conversation.
 
 **Sandbox environment:**
 - Ubuntu 24.04 with Node.js 20, Python 3, Go, npm, pnpm, yarn, pip, ripgrep, gh (GitHub CLI)
 - Network access restricted to GitHub only (git clone, gh commands work)
-- Home directory: /sandbox (persistent per session)
+- Home directory: /sandbox (persistent for this conversation)
 - Resource limits: 0.5 CPU, 512 MiB memory, 10 minute max timeout
 
 **Important:**
@@ -94,15 +94,13 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
-  chatId,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
-  chatId: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${shellPrompt(chatId)}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${shellPrompt}`;
 };
 
 export const codePrompt = `

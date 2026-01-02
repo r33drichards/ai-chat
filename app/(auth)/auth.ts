@@ -1,12 +1,12 @@
 import { compare } from 'bcrypt-ts';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { createGuestUser, getUser } from '@/lib/db/queries';
+import { getUser } from '@/lib/db/queries';
 import { authConfig } from './auth.config';
 import { DUMMY_PASSWORD } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
 
-export type UserType = 'guest' | 'regular';
+export type UserType = 'regular';
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {
@@ -63,19 +63,6 @@ export const {
           return { ...user, type: 'regular' };
         } catch (error) {
           console.error('Failed to authenticate user:', error);
-          return null;
-        }
-      },
-    }),
-    Credentials({
-      id: 'guest',
-      credentials: {},
-      async authorize() {
-        try {
-          const [guestUser] = await createGuestUser();
-          return { ...guestUser, type: 'guest' };
-        } catch (error) {
-          console.error('Failed to create guest user:', error);
           return null;
         }
       },

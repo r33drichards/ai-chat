@@ -53,10 +53,11 @@ export class ChatPage {
     await expect(assistantMessage).not.toBeEmpty({ timeout: 60000 });
 
     // Wait for content to stabilize (stop changing) to ensure streaming is complete
+    // Use longer stability window (5 checks * 200ms = 1 second) to handle slow streaming
     let previousContent = '';
     let stableCount = 0;
-    const requiredStableChecks = 3;
-    const checkInterval = 100;
+    const requiredStableChecks = 5;
+    const checkInterval = 200;
     const maxWaitTime = 30000;
     const startTime = Date.now();
 

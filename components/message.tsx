@@ -9,6 +9,7 @@ import { Markdown } from './markdown';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
+import { ShellTerminal } from './shell-terminal';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -303,6 +304,141 @@ const PurePreviewMessage = ({
                         result={output}
                         isReadonly={isReadonly}
                       />
+                    </div>
+                  );
+                }
+              }
+
+              if (type === 'tool-execShell') {
+                const { toolCallId, state } = part;
+
+                if (state === 'input-available') {
+                  const { input } = part;
+                  return (
+                    <div key={toolCallId} className="my-2">
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Executing shell command...
+                      </div>
+                      <div className="font-mono text-xs bg-muted p-2 rounded">
+                        $ {input.command}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (state === 'output-available') {
+                  const { output } = part;
+
+                  if ('error' in output && output.error) {
+                    return (
+                      <div
+                        key={toolCallId}
+                        className="text-red-500 p-2 border rounded my-2"
+                      >
+                        Error: {String(output.error)}
+                      </div>
+                    );
+                  }
+
+                  if ('streamId' in output && 'command' in output) {
+                    return (
+                      <div key={toolCallId} className="my-2">
+                        <ShellTerminal
+                          streamId={output.streamId as string}
+                          command={output.command as string}
+                        />
+                      </div>
+                    );
+                  }
+
+                  return null;
+                }
+              }
+
+              if (type === 'tool-getShellResult') {
+                const { toolCallId, state } = part;
+
+                if (state === 'input-available') {
+                  return (
+                    <div key={toolCallId} className="my-2">
+                      <div className="text-sm text-muted-foreground">
+                        Waiting for shell command to complete...
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (state === 'output-available') {
+                  const { output } = part;
+
+                  if ('error' in output && output.error) {
+                    return (
+                      <div
+                        key={toolCallId}
+                        className="text-red-500 p-2 border rounded my-2"
+                      >
+                        Error: {String(output.error)}
+                      </div>
+                    );
+                  }
+
+                  // The ShellTerminal component is already showing the output
+                  // via SSE, so we just show a summary here
+                  if ('exitCode' in output) {
+                    const success = output.exitCode === 0;
+                    return (
+                      <div
+                        key={toolCallId}
+                        className={cn(
+                          'text-sm p-2 border rounded my-2',
+                          success
+                            ? 'text-green-600 border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800'
+                            : 'text-red-600 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800',
+                        )}
+                      >
+                        Command {success ? 'completed successfully' : 'failed'}{' '}
+                        (exit code: {output.exitCode})
+                      </div>
+                    );
+                  }
+
+                  return null;
+                }
+              }
+
+              if (type === 'tool-clearSandboxState') {
+                const { toolCallId, state } = part;
+
+                if (state === 'input-available') {
+                  return (
+                    <div key={toolCallId} className="my-2">
+                      <div className="text-sm text-muted-foreground">
+                        Clearing sandbox state...
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (state === 'output-available') {
+                  const { output } = part;
+
+                  if ('error' in output && output.error) {
+                    return (
+                      <div
+                        key={toolCallId}
+                        className="text-red-500 p-2 border rounded my-2"
+                      >
+                        Error: {String(output.error)}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={toolCallId}
+                      className="text-sm text-green-600 p-2 border border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800 rounded my-2"
+                    >
+                      {output.message}
                     </div>
                   );
                 }

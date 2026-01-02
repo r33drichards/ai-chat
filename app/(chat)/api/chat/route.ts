@@ -23,6 +23,11 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import {
+  execShell,
+  getShellResult,
+  clearSandboxState,
+} from '@/lib/ai/tools/exec-shell';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -164,6 +169,9 @@ export async function POST(request: Request) {
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
+                  'execShell',
+                  'getShellResult',
+                  'clearSandboxState',
                 ],
           experimental_transform: smoothStream({ chunking: 'word' }),
           tools: {
@@ -174,6 +182,9 @@ export async function POST(request: Request) {
               session,
               dataStream,
             }),
+            execShell: execShell({ session, dataStream, chatId: id }),
+            getShellResult: getShellResult({ session }),
+            clearSandboxState,
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

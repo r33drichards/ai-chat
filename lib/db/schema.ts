@@ -168,3 +168,30 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// Shell stream for Modal sandbox execution
+export const shellStream = pgTable(
+  'ShellStream',
+  {
+    id: varchar('id', { length: 64 }).notNull(),
+    sessionId: uuid('sessionId').notNull(),
+    chatId: uuid('chatId').notNull(),
+    command: text('command').notNull(),
+    stdout: text('stdout').notNull().default(''),
+    stderr: text('stderr').notNull().default(''),
+    exitCode: json('exitCode').$type<number | null>().default(null),
+    error: text('error'),
+    done: boolean('done').notNull().default(false),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.id] }),
+    chatRef: foreignKey({
+      columns: [table.chatId],
+      foreignColumns: [chat.id],
+    }),
+  }),
+);
+
+export type ShellStream = InferSelectModel<typeof shellStream>;

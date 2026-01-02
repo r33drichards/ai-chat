@@ -41,11 +41,14 @@ export class ChatPage {
   }
 
   async isGenerationComplete() {
-    // Wait for the assistant loading indicator to disappear (streaming complete)
-    const loadingIndicator = this.page.getByTestId('message-assistant-loading');
-    await expect(loadingIndicator).not.toBeVisible({ timeout: 60000 });
+    // Wait for the chat API streaming response to fully complete
+    const response = await this.page.waitForResponse(
+      (response) => response.url().includes('/api/chat'),
+      { timeout: 60000 },
+    );
+    await response.finished();
 
-    // Wait for the send button to reappear, which indicates generation is complete
+    // Wait for the send button to reappear
     await expect(this.sendButton).toBeVisible({ timeout: 60000 });
 
     // Also wait for an assistant message with non-empty content to appear
@@ -55,33 +58,6 @@ export class ChatPage {
       .getByTestId('message-content');
     await expect(assistantMessage).toBeVisible({ timeout: 60000 });
     await expect(assistantMessage).not.toBeEmpty({ timeout: 60000 });
-
-    // Wait for content to stabilize (stop changing) to ensure streaming is complete
-    // The mock model uses 500ms delay between chunks, so we use 600ms intervals
-    // to ensure we catch when streaming has truly stopped
-    let previousContent = '';
-    let stableCount = 0;
-    const requiredStableChecks = 2;
-    const checkInterval = 600;
-    const maxWaitTime = 30000;
-    const startTime = Date.now();
-
-    while (stableCount < requiredStableChecks) {
-      if (Date.now() - startTime > maxWaitTime) {
-        throw new Error('Timeout waiting for content to stabilize');
-      }
-
-      const currentContent = await assistantMessage.innerText();
-
-      if (currentContent === previousContent && currentContent.length > 0) {
-        stableCount++;
-      } else {
-        stableCount = 0;
-        previousContent = currentContent;
-      }
-
-      await this.page.waitForTimeout(checkInterval);
-    }
   }
 
   async isVoteComplete() {

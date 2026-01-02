@@ -121,7 +121,6 @@ test.describe
     });
 
     test('Ada can resume chat generation', async ({ adaContext }) => {
-      test.fixme(); // Requires Redis for resumable streams
       const chatId = generateUUID();
 
       const firstRequest = adaContext.request.post('/api/chat', {
@@ -176,7 +175,6 @@ test.describe
     test('Ada can resume chat generation that has ended during request', async ({
       adaContext,
     }) => {
-      test.fixme(); // Requires Redis for resumable streams
       const chatId = generateUUID();
 
       const firstRequest = await adaContext.request.post('/api/chat', {
@@ -227,7 +225,6 @@ test.describe
     test('Ada cannot resume chat generation that has ended', async ({
       adaContext,
     }) => {
-      test.fixme(); // Requires Redis for resumable streams
       const chatId = generateUUID();
 
       const firstResponse = await adaContext.request.post('/api/chat', {

@@ -628,6 +628,33 @@ export async function getShellStreamsByChatId({ chatId }: { chatId: string }) {
   }
 }
 
+export async function deleteMessagesByIds({
+  chatId,
+  messageIds,
+}: {
+  chatId: string;
+  messageIds: string[];
+}) {
+  try {
+    if (messageIds.length === 0) return;
+
+    // Delete associated votes first
+    await db
+      .delete(vote)
+      .where(and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)));
+
+    // Delete the messages
+    return await db
+      .delete(message)
+      .where(and(eq(message.chatId, chatId), inArray(message.id, messageIds)));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete messages by ids',
+    );
+  }
+}
+
 export async function deleteShellStreamsByChatId({
   chatId,
 }: {

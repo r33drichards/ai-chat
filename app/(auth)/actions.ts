@@ -6,13 +6,16 @@ import { createUser, getUser } from '@/lib/db/queries';
 
 import { signIn } from './auth';
 
+// Restrict authentication to only this email address
+const ALLOWED_EMAIL = 'rwendt1337@gmail.com';
+
 const authFormSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
 
 export interface LoginActionState {
-  status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data';
+  status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data' | 'email_not_allowed';
 }
 
 export const login = async (
@@ -24,6 +27,10 @@ export const login = async (
       email: formData.get('email'),
       password: formData.get('password'),
     });
+
+    if (validatedData.email !== ALLOWED_EMAIL) {
+      return { status: 'email_not_allowed' };
+    }
 
     await signIn('credentials', {
       email: validatedData.email,
@@ -48,7 +55,8 @@ export interface RegisterActionState {
     | 'success'
     | 'failed'
     | 'user_exists'
-    | 'invalid_data';
+    | 'invalid_data'
+    | 'email_not_allowed';
 }
 
 export const register = async (
@@ -60,6 +68,10 @@ export const register = async (
       email: formData.get('email'),
       password: formData.get('password'),
     });
+
+    if (validatedData.email !== ALLOWED_EMAIL) {
+      return { status: 'email_not_allowed' };
+    }
 
     const [user] = await getUser(validatedData.email);
 

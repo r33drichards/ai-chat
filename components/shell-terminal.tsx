@@ -119,7 +119,7 @@ export function ShellTerminal({
   }, [state.stdout, state.stderr]);
 
   const handleCopy = async () => {
-    const output = state.stdout + (state.stderr ? '\n' + state.stderr : '');
+    const output = state.stdout + (state.stderr ? `\n${state.stderr}` : '');
     await navigator.clipboard.writeText(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

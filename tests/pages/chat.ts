@@ -41,6 +41,10 @@ export class ChatPage {
   }
 
   async isGenerationComplete() {
+    // Wait for the assistant loading indicator to disappear (streaming complete)
+    const loadingIndicator = this.page.getByTestId('message-assistant-loading');
+    await expect(loadingIndicator).not.toBeVisible({ timeout: 60000 });
+
     // Wait for the send button to reappear, which indicates generation is complete
     await expect(this.sendButton).toBeVisible({ timeout: 60000 });
 
@@ -53,11 +57,12 @@ export class ChatPage {
     await expect(assistantMessage).not.toBeEmpty({ timeout: 60000 });
 
     // Wait for content to stabilize (stop changing) to ensure streaming is complete
-    // Use longer stability window (5 checks * 200ms = 1 second) to handle slow streaming
+    // The mock model uses 500ms delay between chunks, so we use 600ms intervals
+    // to ensure we catch when streaming has truly stopped
     let previousContent = '';
     let stableCount = 0;
-    const requiredStableChecks = 5;
-    const checkInterval = 200;
+    const requiredStableChecks = 2;
+    const checkInterval = 600;
     const maxWaitTime = 30000;
     const startTime = Date.now();
 

@@ -1,9 +1,5 @@
-import {
-  customProvider,
-  extractReasoningMiddleware,
-  wrapLanguageModel,
-} from 'ai';
-import { xai } from '@ai-sdk/xai';
+import { customProvider } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
 import {
   artifactModel,
   chatModel,
@@ -23,15 +19,10 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': xai('grok-2-vision-1212'),
-        'chat-model-reasoning': wrapLanguageModel({
-          model: xai('grok-3-mini-beta'),
-          middleware: extractReasoningMiddleware({ tagName: 'think' }),
-        }),
-        'title-model': xai('grok-2-1212'),
-        'artifact-model': xai('grok-2-1212'),
+        'chat-model': anthropic('claude-sonnet-4-20250514'),
+        'chat-model-reasoning': anthropic('claude-sonnet-4-20250514'),
+        'title-model': anthropic('claude-haiku-3-5-20241022'),
+        'artifact-model': anthropic('claude-sonnet-4-20250514'),
       },
-      imageModels: {
-        'small-model': xai.imageModel('grok-2-image'),
-      },
+      // Note: Anthropic does not support image generation
     });

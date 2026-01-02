@@ -37,6 +37,11 @@ export default function Page() {
         type: 'error',
         description: 'Failed validating your submission!',
       });
+    } else if (state.status === 'email_not_allowed') {
+      toast({
+        type: 'error',
+        description: 'This email is not authorized to access this application.',
+      });
     } else if (state.status === 'success') {
       setIsSuccessful(true);
       updateSession();

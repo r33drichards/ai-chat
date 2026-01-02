@@ -41,7 +41,14 @@ export class ChatPage {
   }
 
   async isGenerationComplete() {
-    // Wait for the send button to reappear, which indicates generation is complete
+    // Wait for the chat API streaming response to fully complete
+    const response = await this.page.waitForResponse(
+      (response) => response.url().includes('/api/chat'),
+      { timeout: 60000 },
+    );
+    await response.finished();
+
+    // Wait for the send button to reappear
     await expect(this.sendButton).toBeVisible({ timeout: 60000 });
 
     // Also wait for an assistant message with non-empty content to appear

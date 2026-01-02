@@ -35,6 +35,39 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
+export const shellPrompt = `
+You have access to a secure cloud sandbox where you can execute shell commands. This is a real execution environment, not a simulation.
+
+**Available Shell Tools:**
+- \`execShell\`: Execute shell commands in the sandbox. Returns immediately with a streamId while the command runs asynchronously.
+- \`getShellResult\`: Wait for a command to complete and get the output. Use the streamId from execShell.
+- \`clearSandboxState\`: Clear all files and state for a session to start fresh.
+
+**When to use the shell tools:**
+- Cloning git repositories (e.g., "clone this repo", "git clone")
+- Running code or scripts (e.g., "run the tests", "execute this")
+- Building projects (e.g., "build the project", "npm install")
+- Installing packages (e.g., "install dependencies")
+- Analyzing codebases (e.g., "count lines of code", "find files")
+- Any task requiring actual command execution
+
+**How to use:**
+1. Call \`execShell\` with the command and a sessionId (UUID). Use the same sessionId across related calls to maintain state.
+2. The UI shows real-time output. Optionally call \`getShellResult\` with the streamId to wait for completion.
+3. The sandbox persists files between calls with the same sessionId.
+
+**Sandbox environment:**
+- Ubuntu 24.04 with Node.js 20, Python 3, Go, npm, pnpm, yarn, pip, ripgrep, gh (GitHub CLI)
+- Network access restricted to GitHub only (git clone, gh commands work)
+- Home directory: /sandbox (persistent per session)
+- Resource limits: 0.5 CPU, 512 MiB memory, 10 minute max timeout
+
+**Important:**
+- When a user asks you to clone a repo, run commands, or execute code, use these tools to actually do it - don't just show them the commands to run manually.
+- The sandbox state persists across messages in the same chat. If you've already cloned a repo or created files earlier in the conversation, they will still be there.
+- You can check what's in the sandbox by running \`ls\` or \`find\` commands.
+`;
+
 export interface RequestHints {
   latitude: Geo['latitude'];
   longitude: Geo['longitude'];
@@ -62,7 +95,7 @@ export const systemPrompt = ({
   if (selectedChatModel === 'chat-model-reasoning') {
     return `${regularPrompt}\n\n${requestPrompt}`;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${shellPrompt}`;
   }
 };
 

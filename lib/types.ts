@@ -25,7 +25,7 @@ type requestSuggestionsTool = InferUITool<
 >;
 type execShellTool = InferUITool<ReturnType<typeof execShell>>;
 type getShellResultTool = InferUITool<ReturnType<typeof getShellResult>>;
-type clearSandboxStateTool = InferUITool<typeof clearSandboxState>;
+type clearSandboxStateTool = InferUITool<ReturnType<typeof clearSandboxState>>;
 
 export type ChatTools = {
   getWeather: weatherTool;

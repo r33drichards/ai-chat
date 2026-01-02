@@ -3,6 +3,7 @@ import type { getWeather } from './ai/tools/get-weather';
 import type { createDocument } from './ai/tools/create-document';
 import type { updateDocument } from './ai/tools/update-document';
 import type { requestSuggestions } from './ai/tools/request-suggestions';
+import type { execShell, getShellResult, clearSandboxState } from './ai/tools/exec-shell';
 import type { InferUITool, UIMessage } from 'ai';
 
 import type { ArtifactKind } from '@/components/artifact';
@@ -22,12 +23,18 @@ type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
 >;
+type execShellTool = InferUITool<ReturnType<typeof execShell>>;
+type getShellResultTool = InferUITool<ReturnType<typeof getShellResult>>;
+type clearSandboxStateTool = InferUITool<typeof clearSandboxState>;
 
 export type ChatTools = {
   getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
+  execShell: execShellTool;
+  getShellResult: getShellResultTool;
+  clearSandboxState: clearSandboxStateTool;
 };
 
 export type CustomUIDataTypes = {
@@ -42,6 +49,9 @@ export type CustomUIDataTypes = {
   kind: ArtifactKind;
   clear: null;
   finish: null;
+  // Shell stream data types
+  shellStreamId: string;
+  shellCommand: string;
 };
 
 export type ChatMessage = UIMessage<

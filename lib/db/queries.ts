@@ -27,6 +27,8 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  shellStream,
+  type ShellStream,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -109,6 +111,7 @@ export async function deleteChatById({ id }: { id: string }) {
     await db.delete(vote).where(eq(vote.chatId, id));
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
+    await db.delete(shellStream).where(eq(shellStream.chatId, id));
 
     const [chatsDeleted] = await db
       .delete(chat)
@@ -533,6 +536,130 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get stream ids by chat id',
+    );
+  }
+}
+
+// Shell stream operations for Modal sandbox execution
+
+export async function createShellStream({
+  id,
+  sessionId,
+  chatId,
+  command,
+}: {
+  id: string;
+  sessionId: string;
+  chatId: string;
+  command: string;
+}) {
+  try {
+    const now = new Date();
+    return await db
+      .insert(shellStream)
+      .values({
+        id,
+        sessionId,
+        chatId,
+        command,
+        stdout: '',
+        stderr: '',
+        exitCode: null,
+        done: false,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create shell stream',
+    );
+  }
+}
+
+export async function getShellStream({ id }: { id: string }) {
+  try {
+    const [result] = await db
+      .select()
+      .from(shellStream)
+      .where(eq(shellStream.id, id));
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get shell stream',
+    );
+  }
+}
+
+export async function updateShellStream({
+  id,
+  stdout,
+  stderr,
+  exitCode,
+  error,
+  done,
+}: {
+  id: string;
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number | null;
+  error?: string | null;
+  done?: boolean;
+}) {
+  try {
+    const updates: Partial<ShellStream> = {
+      updatedAt: new Date(),
+    };
+    if (stdout !== undefined) updates.stdout = stdout;
+    if (stderr !== undefined) updates.stderr = stderr;
+    if (exitCode !== undefined) updates.exitCode = exitCode;
+    if (error !== undefined) updates.error = error ?? undefined;
+    if (done !== undefined) updates.done = done;
+
+    return await db
+      .update(shellStream)
+      .set(updates)
+      .where(eq(shellStream.id, id))
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update shell stream',
+    );
+  }
+}
+
+export async function getShellStreamsByChatId({ chatId }: { chatId: string }) {
+  try {
+    return await db
+      .select()
+      .from(shellStream)
+      .where(eq(shellStream.chatId, chatId))
+      .orderBy(desc(shellStream.createdAt));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get shell streams by chat id',
+    );
+  }
+}
+
+export async function deleteShellStreamsByChatId({
+  chatId,
+}: {
+  chatId: string;
+}) {
+  try {
+    return await db
+      .delete(shellStream)
+      .where(eq(shellStream.chatId, chatId))
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete shell streams by chat id',
     );
   }
 }

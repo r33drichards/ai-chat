@@ -51,6 +51,31 @@ export class ChatPage {
       .getByTestId('message-content');
     await expect(assistantMessage).toBeVisible({ timeout: 60000 });
     await expect(assistantMessage).not.toBeEmpty({ timeout: 60000 });
+
+    // Wait for content to stabilize (stop changing) to ensure streaming is complete
+    let previousContent = '';
+    let stableCount = 0;
+    const requiredStableChecks = 3;
+    const checkInterval = 100;
+    const maxWaitTime = 30000;
+    const startTime = Date.now();
+
+    while (stableCount < requiredStableChecks) {
+      if (Date.now() - startTime > maxWaitTime) {
+        throw new Error('Timeout waiting for content to stabilize');
+      }
+
+      const currentContent = await assistantMessage.innerText();
+
+      if (currentContent === previousContent && currentContent.length > 0) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+        previousContent = currentContent;
+      }
+
+      await this.page.waitForTimeout(checkInterval);
+    }
   }
 
   async isVoteComplete() {

@@ -1,4 +1,4 @@
-import { ModalClient, type Secret } from 'modal';
+import { ModalClient } from 'modal';
 import { z } from 'zod';
 import { tool, type UIMessageStreamWriter } from 'ai';
 import type { Session } from 'next-auth';
@@ -25,21 +25,6 @@ function sanitizeVolumeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
 }
 
-// CIDR allowlist for network restrictions (GitHub only)
-const CIDR_ALLOWLIST = [
-  // GitHub core infrastructure
-  '192.30.252.0/22',
-  '185.199.108.0/22',
-  '140.82.112.0/20',
-  // GitHub Azure IPs for git/api
-  '20.201.28.0/24',
-  '20.205.243.0/24',
-  '20.87.245.0/24',
-  '4.148.0.0/16',
-  '20.200.245.0/24',
-  '20.233.83.0/24',
-];
-
 /**
  * Build the Docker image for the sandbox
  */
@@ -55,8 +40,6 @@ function buildSandboxImage(modal: ModalClient) {
       'RUN apt-get install -y --no-install-recommends python3 python3-pip python3-venv',
       // Install Go
       'RUN apt-get install -y --no-install-recommends golang-go',
-      // Install GitHub CLI
-      'RUN apt-get install -y --no-install-recommends gh',
       // Install Node.js 20 LTS via NodeSource
       'RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs',
       // Cleanup apt cache
@@ -117,64 +100,26 @@ async function execShellInSandboxStreaming({
     [SANDBOX_HOME]: homeVolume,
   };
 
-  // Create sandbox with CIDR allowlist (GitHub only) and resource limits
+  // Create sandbox with resource limits
   const sb = await modal.sandboxes.create(app, image, {
     volumes,
-    cidrAllowlist: CIDR_ALLOWLIST,
     // Set sandbox lifetime timeout (same as command timeout)
     timeoutMs,
     // Resource allocation: 0.5 CPU cores and 512 MiB memory
     cpu: 0.5,
     memoryMiB: 512,
   });
-  console.log(
-    '[Modal] Started Shell Sandbox:',
-    sb.sandboxId,
-    'with network restrictions',
-  );
+  console.log('[Modal] Started Shell Sandbox:', sb.sandboxId);
 
   let fullStdout = '';
   let fullStderr = '';
 
   try {
-    // Get the github-secret which contains GITHUB_TOKEN
-    let secret: Secret | undefined;
-
-    try {
-      secret = await modal.secrets.fromName('github-secret', {
-        requiredKeys: ['GITHUB_TOKEN'],
-      });
-      console.log('[Modal] Successfully loaded github-secret');
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      console.warn('[Modal] Failed to load github-secret:', errorMsg);
-      // Try without required keys to see if secret exists at all
-      try {
-        secret = await modal.secrets.fromName('github-secret');
-        console.log('[Modal] Secret exists but may be missing required keys');
-      } catch {
-        console.warn(
-          '[Modal] github-secret does not exist, proceeding without auth',
-        );
-      }
-    }
-
-    // Authenticate gh CLI with the GitHub token if available
-    if (secret) {
-      const ghAuth = await sb.exec(['gh', 'auth', 'setup-git'], {
-        secrets: [secret],
-        workdir: SANDBOX_HOME,
-      });
-      await ghAuth.wait();
-      console.log('[Modal] Authenticated gh CLI');
-    }
-
     // Run the shell command directly
     const shellCmd = ['bash', '-c', command];
     console.log('[Modal] Running shell command:', command);
 
     const shell = await sb.exec(shellCmd, {
-      secrets: secret ? [secret] : [],
       workdir: SANDBOX_HOME,
       timeoutMs,
     });
@@ -265,15 +210,11 @@ interface ExecShellProps {
 export const execShell = ({ session, dataStream, chatId }: ExecShellProps) =>
   tool({
     description: `Execute a shell command in a secure Modal sandbox with real-time streaming output.
-The sandbox has a persistent home directory per session, so you can clone repos and they will persist across tool calls.
-Use this for tasks like: cloning repos (git clone), running tests, building code, executing scripts, etc.
+The sandbox has a persistent home directory per session, so files and changes persist across tool calls.
+Use this for tasks like: running tests, building code, executing scripts, installing packages, etc.
 
-Example workflow:
-1. Clone a repo: git clone https://github.com/owner/repo
-2. Navigate and run commands: cd repo && npm install && npm test
-
+Available tools: Node.js 20, Python 3, Go, npm, pnpm, yarn, pip, ripgrep, and common shell utilities.
 The home directory is ${SANDBOX_HOME} and persists across calls with the same sessionId.
-Network access is restricted to GitHub only.
 
 IMPORTANT: This tool returns immediately with a streamId. The command runs asynchronously.
 Use the getShellResult tool with the streamId to wait for completion and get the final output.

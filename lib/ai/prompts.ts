@@ -64,8 +64,9 @@ You have access to a secure cloud sandbox where you can execute shell commands. 
 
 **Important:**
 - When a user asks you to clone a repo, run commands, or execute code, use these tools to actually do it - don't just show them the commands to run manually.
+- The sandbox may already contain cloned repositories or files from previous interactions. Always check what's already present with \`ls\` before cloning a repo that might already exist.
 - The sandbox state persists across messages in the same chat. If you've already cloned a repo or created files earlier in the conversation, they will still be there.
-- You can check what's in the sandbox by running \`ls\` or \`find\` commands.
+- When asked to analyze or work with a repository, first check if it's already cloned in the sandbox before attempting to clone it again.
 `;
 
 export interface RequestHints {

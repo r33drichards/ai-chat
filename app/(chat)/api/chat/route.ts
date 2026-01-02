@@ -182,7 +182,7 @@ export async function POST(request: Request) {
             }),
             execShell: execShell({ session, dataStream, chatId: id }),
             getShellResult: getShellResult({ session }),
-            clearSandboxState,
+            clearSandboxState: clearSandboxState({ chatId: id }),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

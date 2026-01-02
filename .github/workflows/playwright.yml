@@ -9,10 +9,27 @@ jobs:
   test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       # Use a static test secret for CI - this is safe since it's only used for testing
       AUTH_SECRET: test-secret-for-playwright-ci-only-do-not-use-in-production
-      POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+      # Use the local PostgreSQL service container for CI
+      POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/testdb
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
 

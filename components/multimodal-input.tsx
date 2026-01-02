@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
-import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
+import { ArrowUpIcon, PaperclipIcon, StopIcon, CrossIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -28,6 +28,7 @@ import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
+import { cancelThread } from '@/app/(chat)/actions';
 
 function PureMultimodalInput({
   chatId,
@@ -311,7 +312,12 @@ function PureMultimodalInput({
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
         {status === 'submitted' ? (
-          <StopButton stop={stop} setMessages={setMessages} />
+          <StopButton
+            stop={stop}
+            setMessages={setMessages}
+            chatId={chatId}
+            messages={messages}
+          />
         ) : (
           <SendButton
             input={input}
@@ -365,26 +371,73 @@ const AttachmentsButton = memo(PureAttachmentsButton);
 function PureStopButton({
   stop,
   setMessages,
+  chatId,
+  messages,
 }: {
   stop: () => void;
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
+  chatId: string;
+  messages: Array<UIMessage>;
 }) {
+  const handleStop = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      stop();
+      setMessages((messages) => messages);
+    },
+    [stop, setMessages],
+  );
+
+  const handleCancel = useCallback(
+    async (event: React.MouseEvent) => {
+      event.preventDefault();
+      stop();
+
+      // Find the last assistant message (which is currently streaming)
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        // Delete from database
+        await cancelThread({
+          chatId,
+          messageIds: [lastMessage.id],
+        });
+
+        // Remove from local state
+        setMessages((prevMessages) =>
+          prevMessages.filter((msg) => msg.id !== lastMessage.id),
+        );
+      }
+    },
+    [stop, setMessages, chatId, messages],
+  );
+
   return (
-    <Button
-      data-testid="stop-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
-      onClick={(event) => {
-        event.preventDefault();
-        stop();
-        setMessages((messages) => messages);
-      }}
-    >
-      <StopIcon size={14} />
-    </Button>
+    <div className="flex flex-row gap-1">
+      <Button
+        data-testid="stop-button"
+        className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+        onClick={handleStop}
+        title="Stop generating"
+      >
+        <StopIcon size={14} />
+      </Button>
+      <Button
+        data-testid="cancel-button"
+        className="rounded-full p-1.5 h-fit border dark:border-zinc-600 bg-destructive/10 hover:bg-destructive/20"
+        onClick={handleCancel}
+        title="Cancel and remove response"
+      >
+        <CrossIcon size={14} />
+      </Button>
+    </div>
   );
 }
 
-const StopButton = memo(PureStopButton);
+const StopButton = memo(PureStopButton, (prevProps, nextProps) => {
+  if (prevProps.chatId !== nextProps.chatId) return false;
+  if (prevProps.messages.length !== nextProps.messages.length) return false;
+  return true;
+});
 
 function PureSendButton({
   submitForm,

@@ -164,6 +164,7 @@ export function ShellTerminal({
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={handleCopy}
             className="p-1 hover:bg-zinc-700 rounded transition-colors"
             title="Copy output"

@@ -35,7 +35,7 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
-export const shellPrompt = `
+export const shellPrompt = (chatId: string) => `
 You have access to a secure cloud sandbox where you can execute shell commands. This is a real execution environment, not a simulation.
 
 **Available Shell Tools:**
@@ -52,7 +52,7 @@ You have access to a secure cloud sandbox where you can execute shell commands. 
 - Any task requiring actual command execution
 
 **How to use:**
-1. Call \`execShell\` with the command and a sessionId (UUID). Use the same sessionId across related calls to maintain state.
+1. Call \`execShell\` with the command and sessionId. **IMPORTANT: Always use this exact sessionId: \`${chatId}\`** - this ensures your sandbox state persists correctly for this conversation.
 2. The UI shows real-time output. Optionally call \`getShellResult\` with the streamId to wait for completion.
 3. The sandbox persists files between calls with the same sessionId.
 
@@ -94,13 +94,15 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  chatId,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  chatId: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${shellPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${shellPrompt(chatId)}`;
 };
 
 export const codePrompt = `

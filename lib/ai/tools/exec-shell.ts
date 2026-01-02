@@ -8,30 +8,14 @@ import {
   getShellStream,
 } from '@/lib/db/queries';
 import type { ChatMessage } from '@/lib/types';
-import { isVercelDeployment } from '@/lib/constants';
 
 const SANDBOX_HOME = '/sandbox';
-
-// Check if Modal credentials are configured
-function hasModalCredentials(): boolean {
-  return Boolean(
-    process.env.MODAL_TOKEN_ID && process.env.MODAL_TOKEN_SECRET,
-  );
-}
 
 // Lazy-initialized Modal client
 let modalClient: ModalClient | null = null;
 
 function getModalClient(): ModalClient {
   if (!modalClient) {
-    if (!hasModalCredentials()) {
-      const envInfo = isVercelDeployment
-        ? `VERCEL_ENV=${process.env.VERCEL_ENV}`
-        : 'local environment';
-      throw new Error(
-        `Modal credentials not configured. Missing MODAL_TOKEN_ID and/or MODAL_TOKEN_SECRET environment variables. (${envInfo})`,
-      );
-    }
     modalClient = new ModalClient();
   }
   return modalClient;
@@ -319,22 +303,6 @@ The UI will show real-time streaming output.`,
       sessionId: string;
       timeoutMs?: number;
     }) => {
-      // Check for Modal credentials upfront
-      if (!hasModalCredentials()) {
-        const envInfo = isVercelDeployment
-          ? `VERCEL_ENV=${process.env.VERCEL_ENV}`
-          : 'local environment';
-        console.error(
-          `[Modal] Sandbox unavailable: Modal credentials not configured (${envInfo})`,
-        );
-        return {
-          status: 'error',
-          error: `Sandbox is not available: Modal credentials (MODAL_TOKEN_ID and MODAL_TOKEN_SECRET) are not configured for this environment. Current environment: ${envInfo}`,
-          command,
-          sessionId,
-        };
-      }
-
       // Generate a unique stream ID
       const streamId = generateStreamId();
 

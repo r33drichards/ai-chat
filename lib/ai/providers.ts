@@ -21,7 +21,7 @@ export const myProvider = isTestEnvironment
       languageModels: {
         'chat-model': anthropic('claude-sonnet-4-5-20250514'),
         'chat-model-reasoning': anthropic('claude-sonnet-4-5-20250514'),
-        'title-model': anthropic('claude-haiku-4-5-20250514'),
+        'title-model': anthropic('claude-haiku-4-5-20251025'),
         'artifact-model': anthropic('claude-sonnet-4-5-20250514'),
       },
       // Note: Anthropic does not support image generation

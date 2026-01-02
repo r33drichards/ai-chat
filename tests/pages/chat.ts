@@ -43,6 +43,14 @@ export class ChatPage {
   async isGenerationComplete() {
     // Wait for the send button to reappear, which indicates generation is complete
     await expect(this.sendButton).toBeVisible({ timeout: 60000 });
+
+    // Also wait for an assistant message with non-empty content to appear
+    const assistantMessage = this.page
+      .getByTestId('message-assistant')
+      .last()
+      .getByTestId('message-content');
+    await expect(assistantMessage).toBeVisible({ timeout: 60000 });
+    await expect(assistantMessage).not.toBeEmpty({ timeout: 60000 });
   }
 
   async isVoteComplete() {

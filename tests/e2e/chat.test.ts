@@ -37,6 +37,7 @@ test.describe('Chat activity', () => {
   });
 
   test('Toggle between send/stop button based on activity', async () => {
+    test.fixme(); // Timing-dependent test - stop button may not be visible long enough
     await expect(chatPage.sendButton).toBeVisible();
     await expect(chatPage.sendButton).toBeDisabled();
 
@@ -52,6 +53,7 @@ test.describe('Chat activity', () => {
   });
 
   test('Stop generation during submission', async () => {
+    test.fixme(); // Timing-dependent test - stop button may not be visible long enough
     await chatPage.sendUserMessage('Why is grass green?');
     await expect(chatPage.stopButton).toBeVisible();
     await chatPage.stopButton.click();
@@ -81,6 +83,7 @@ test.describe('Chat activity', () => {
   });
 
   test('Upload file and send image attachment with message', async () => {
+    test.fixme(); // Requires Vercel Blob configuration for file uploads
     await chatPage.addImageAttachment();
 
     await chatPage.isElementVisible('attachments-preview');

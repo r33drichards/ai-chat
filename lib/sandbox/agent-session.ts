@@ -1,4 +1,4 @@
-import { ObjectPoolSdk, getObjectPoolSdk } from './object-pool-sdk';
+import { type ObjectPoolSdk, getObjectPoolSdk } from './object-pool-sdk';
 import type {
   SandboxItem,
   BorrowedSandbox,
@@ -59,15 +59,27 @@ export class AgentSession {
   }
 
   /**
+   * Get the current sandbox if one is borrowed, with proper type narrowing
+   */
+  private getActiveSandbox(): BorrowedSandbox | null {
+    const { item, borrowToken } = this.data;
+    if (item !== null && borrowToken !== null) {
+      return {
+        item,
+        borrowToken,
+        sessionId: this.sessionId,
+      };
+    }
+    return null;
+  }
+
+  /**
    * Ensure we have a borrowed sandbox, borrowing one if needed
    */
   async ensureSandbox(): Promise<BorrowedSandbox> {
-    if (this.hasSandbox()) {
-      return {
-        item: this.data.item!,
-        borrowToken: this.data.borrowToken!,
-        sessionId: this.sessionId,
-      };
+    const activeSandbox = this.getActiveSandbox();
+    if (activeSandbox) {
+      return activeSandbox;
     }
 
     // Borrow a new sandbox
@@ -194,13 +206,14 @@ export class AgentSession {
    * Call this when the conversation/session ends
    */
   async releaseSandbox(): Promise<void> {
-    if (!this.hasSandbox()) {
+    const activeSandbox = this.getActiveSandbox();
+    if (!activeSandbox) {
       return;
     }
 
     await this.objectPoolSdk.returnAndWait(
-      this.data.item!,
-      this.data.borrowToken!,
+      activeSandbox.item,
+      activeSandbox.borrowToken,
       { sessionId: this.sessionId }
     );
 

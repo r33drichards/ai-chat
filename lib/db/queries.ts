@@ -29,6 +29,8 @@ import {
   stream,
   shellStream,
   type ShellStream,
+  sandboxSession,
+  type SandboxSession,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateHashedPassword } from './utils';
@@ -94,6 +96,7 @@ export async function deleteChatById({ id }: { id: string }) {
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
     await db.delete(shellStream).where(eq(shellStream.chatId, id));
+    await db.delete(sandboxSession).where(eq(sandboxSession.chatId, id));
 
     const [chatsDeleted] = await db
       .delete(chat)
@@ -669,6 +672,204 @@ export async function deleteShellStreamsByChatId({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to delete shell streams by chat id',
+    );
+  }
+}
+
+// Sandbox session operations for object pool-based sandbox management
+
+export async function createSandboxSession({
+  sessionId,
+  chatId,
+}: {
+  sessionId: string;
+  chatId: string;
+}) {
+  try {
+    const now = new Date();
+    const [result] = await db
+      .insert(sandboxSession)
+      .values({
+        sessionId,
+        chatId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create sandbox session',
+    );
+  }
+}
+
+export async function getSandboxSessionBySessionId({
+  sessionId,
+}: {
+  sessionId: string;
+}): Promise<SandboxSession | null> {
+  try {
+    const [result] = await db
+      .select()
+      .from(sandboxSession)
+      .where(eq(sandboxSession.sessionId, sessionId));
+    return result ?? null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get sandbox session',
+    );
+  }
+}
+
+export async function getSandboxSessionByChatId({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<SandboxSession | null> {
+  try {
+    const [result] = await db
+      .select()
+      .from(sandboxSession)
+      .where(eq(sandboxSession.chatId, chatId))
+      .orderBy(desc(sandboxSession.createdAt))
+      .limit(1);
+    return result ?? null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get sandbox session by chat id',
+    );
+  }
+}
+
+export async function updateSandboxSession({
+  sessionId,
+  sandboxId,
+  execUrl,
+  borrowToken,
+  borrowedAt,
+}: {
+  sessionId: string;
+  sandboxId?: string | null;
+  execUrl?: string | null;
+  borrowToken?: string | null;
+  borrowedAt?: Date | null;
+}) {
+  try {
+    const updates: Partial<SandboxSession> = {
+      updatedAt: new Date(),
+    };
+    if (sandboxId !== undefined) updates.sandboxId = sandboxId;
+    if (execUrl !== undefined) updates.execUrl = execUrl;
+    if (borrowToken !== undefined) updates.borrowToken = borrowToken;
+    if (borrowedAt !== undefined) updates.borrowedAt = borrowedAt;
+
+    const [result] = await db
+      .update(sandboxSession)
+      .set(updates)
+      .where(eq(sandboxSession.sessionId, sessionId))
+      .returning();
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update sandbox session',
+    );
+  }
+}
+
+export async function upsertSandboxSession({
+  sessionId,
+  chatId,
+  sandboxId,
+  execUrl,
+  borrowToken,
+  borrowedAt,
+}: {
+  sessionId: string;
+  chatId: string;
+  sandboxId?: string | null;
+  execUrl?: string | null;
+  borrowToken?: string | null;
+  borrowedAt?: Date | null;
+}) {
+  try {
+    const existing = await getSandboxSessionBySessionId({ sessionId });
+    if (existing) {
+      return await updateSandboxSession({
+        sessionId,
+        sandboxId,
+        execUrl,
+        borrowToken,
+        borrowedAt,
+      });
+    }
+    const now = new Date();
+    const [result] = await db
+      .insert(sandboxSession)
+      .values({
+        sessionId,
+        chatId,
+        sandboxId,
+        execUrl,
+        borrowToken,
+        borrowedAt,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to upsert sandbox session',
+    );
+  }
+}
+
+export async function deleteSandboxSessionByChatId({
+  chatId,
+}: {
+  chatId: string;
+}) {
+  try {
+    return await db
+      .delete(sandboxSession)
+      .where(eq(sandboxSession.chatId, chatId))
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete sandbox session by chat id',
+    );
+  }
+}
+
+export async function clearSandboxSessionSandbox({
+  sessionId,
+}: {
+  sessionId: string;
+}) {
+  try {
+    const [result] = await db
+      .update(sandboxSession)
+      .set({
+        sandboxId: null,
+        execUrl: null,
+        borrowToken: null,
+        borrowedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(sandboxSession.sessionId, sessionId))
+      .returning();
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to clear sandbox session sandbox',
     );
   }
 }

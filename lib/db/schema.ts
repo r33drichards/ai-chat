@@ -195,3 +195,29 @@ export const shellStream = pgTable(
 );
 
 export type ShellStream = InferSelectModel<typeof shellStream>;
+
+// Sandbox session for object pool-based sandbox management
+export const sandboxSession = pgTable(
+  'SandboxSession',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    sessionId: varchar('sessionId', { length: 128 }).notNull().unique(),
+    chatId: uuid('chatId')
+      .notNull()
+      .references(() => chat.id),
+    sandboxId: varchar('sandboxId', { length: 128 }),
+    execUrl: text('execUrl'),
+    borrowToken: varchar('borrowToken', { length: 128 }),
+    borrowedAt: timestamp('borrowedAt'),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
+  },
+  (table) => ({
+    chatRef: foreignKey({
+      columns: [table.chatId],
+      foreignColumns: [chat.id],
+    }),
+  }),
+);
+
+export type SandboxSession = InferSelectModel<typeof sandboxSession>;
